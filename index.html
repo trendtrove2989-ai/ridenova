@@ -1496,7 +1496,7 @@ th, td {
                     <table id="employees-table">
                         <thead>
                             <tr>
-                                <th>User ID</th>
+                                <th>User Name</th>
                                 <th>Username</th>
                                 <th>Role</th>
                                 <th>Working Hours</th>
@@ -2953,11 +2953,17 @@ th, td {
                 </div>
             </div>
         </div>
-        <div style="text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color);">
-            <button class="bubbles btn-success" id="download-pdf-btn" style="width: auto;">
-                <span class="text">📥 Download PDF Invoice</span>
+        <div style="text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color); display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
+            <button class="bubbles btn-success" id="download-passenger-pdf-btn" style="width: auto;">
+                <span class="text">📥 Passenger PDF</span>
             </button>
-        </div>        
+            <button class="bubbles" id="download-driver-pdf-btn" style="width: auto; --c2: #3498db;">
+                <span class="text">📥 Driver PDF</span>
+            </button>
+            <button class="bubbles" id="copy-details-btn" style="width: auto; --c2: #9b59b6;">
+                <span class="text">📋 Copy All Details</span>
+            </button>
+        </div>       
     </div>
 <!-- Add EmailJS SDK -->
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
@@ -3199,61 +3205,166 @@ function renderAdminSplitTable() {
         tbody.appendChild(row);
     });
 }
-window.generatePDFInvoice = function(invoiceId) {
+window.generatePDFInvoice = function(invoiceId, type = 'passenger') {
     const { jsPDF } = window.jspdf;
     const inv = window.invoices.find(i => i.id === invoiceId);
     if (!inv) return;
 
     const doc = new jsPDF();
-    const gold = [212, 175, 55]; // Your brand gold color
+    const gold = [212, 175, 55]; 
+    const black = [0, 0, 0];
+
+    // --- Header Banner (Full Width) ---
+    doc.setFillColor(10, 12, 16); // Dark background for banner
+    doc.rect(0, 0, 210, 45, 'F');
     
-    // Header - Company Name
-    doc.setFontSize(22);
-    doc.setTextColor(gold[0], gold[1], gold[2]);
-    doc.text("RIDENOVA CARLIFT", 105, 20, { align: "center" });
+    // Company Name in Center of Banner
+    doc.setFontSize(28);
+    doc.setTextColor(212, 175, 55);
+    doc.setFont("helvetica", "bold");
+    doc.text("RIDENOVA CARLIFT", 105, 25, { align: "center" });
     
     doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.text("Premium Transportation Services Worldwide", 105, 27, { align: "center" });
-    
-    doc.setDrawColor(gold[0], gold[1], gold[2]);
-    doc.line(20, 35, 190, 35);
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "normal");
+    doc.text("PREMIUM TRANSPORTATION SERVICES", 105, 35, { align: "center" });
 
-    // Invoice Info
-    doc.setFontSize(14);
-    doc.setTextColor(0);
-    doc.text(`INVOICE: ${inv.id}`, 20, 45);
-    doc.setFontSize(10);
-    doc.text(`Date: ${inv.date}`, 190, 45, { align: "right" });
+    // --- Invoice Type Ribbon ---
+    doc.setFillColor(212, 175, 55);
+    doc.rect(0, 45, 210, 10, 'F');
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(12);
+    doc.text(`${type.toUpperCase()} INVOICE: ${inv.id}`, 105, 52, { align: "center" });
 
-    // Main Table
-    const tableRows = [
-        ["Passenger Name", inv.passengerName || "N/A"],
-        ["Phone Number", inv.passengerPhone || "N/A"],
-        ["Days of Ride (Monthly)", `${inv.monthlyDays || 0} Days`],
-        ["Transport Budget", `${(inv.transportAmount || 0).toFixed(2)} AED `],
-        ["Service Charges", `${(inv.serviceCharges || 0).toFixed(2)} AED `],
-        ["Per Day Budget", `${(inv.dailyBudget || 0).toFixed(2)} AED `],
-        ["Total Amount", `${(inv.totalBudget || 0).toFixed(2)} AED `]
-    ];
+    let currentY = 70;
 
-    doc.autoTable({
-        startY: 55,
-        head: [['Description', 'Details']],
-        body: tableRows,
-        theme: 'striped',
-        headStyles: { fillColor: gold },
-        columnStyles: { 0: { fontStyle: 'bold', width: 60 } }
-    });
+    if (type === 'passenger') {
+        // --- Passenger Layout (Full Details) ---
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(12);
+        doc.text("PASSENGER DETAILS", 15, currentY);
+        doc.line(15, currentY + 2, 80, currentY + 2);
+        
+        doc.setFontSize(10);
+        currentY += 10;
+        doc.text(`Name: ${inv.passengerName}`, 15, currentY);
+        doc.text(`Phone: ${inv.passengerPhone}`, 15, currentY + 6);
+        doc.text(`Nationality: ${inv.passengerNationality}`, 15, currentY + 12);
+        
+        // Right Side Details
+        doc.text(`Date: ${inv.date}`, 140, currentY);
+        doc.text(`Agent: ${inv.passengerAgent}`, 140, currentY + 6);
+
+        // Table - No Quantity Column
+        const tableRows = [
+            ["Description", "Amount (AED)"],
+            ["Monthly Transportation Charges", `${(inv.transportAmount || 0).toFixed(2)} AED`],
+            ["Service & Management Charges", `${(inv.serviceCharges || 0).toFixed(2)} AED`]
+        ];
+
+        doc.autoTable({
+            startY: currentY + 25,
+            head: [tableRows[0]],
+            body: tableRows.slice(1),
+            theme: 'grid',
+            headStyles: { fillColor: gold, textColor: [0,0,0] },
+            styles: { fontSize: 10 },
+            columnStyles: { 1: { halign: 'right' } }
+        });
+    } else {
+        // --- Driver Layout (Amounts Only) ---
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(12);
+        doc.text("DRIVER PAYMENT SUMMARY", 15, currentY);
+        doc.line(15, currentY + 2, 80, currentY + 2);
+
+        doc.setFontSize(10);
+        currentY += 10;
+        doc.text(`Invoice Ref: ${inv.id}`, 15, currentY);
+        doc.text(`Billing Date: ${inv.date}`, 15, currentY + 6);
+
+        const tableRows = [
+            ["Account Description", "Balance (AED)"],
+            ["Driver Contract Amount", `${(inv.transportAmount || 0).toFixed(2)} AED`],
+            ["Driver Side Service Surcharge", `${(inv.driverCharges || 0).toFixed(2)} AED`]
+        ];
+
+        doc.autoTable({
+            startY: currentY + 20,
+            head: [tableRows[0]],
+            body: tableRows.slice(1),
+            theme: 'striped',
+            headStyles: { fillColor: [40, 40, 40], textColor: [255,255,255] },
+            styles: { fontSize: 11 },
+            columnStyles: { 1: { halign: 'right' } }
+        });
+    }
+
+    // --- Final Total ---
+    const finalY = doc.lastAutoTable.finalY + 15;
+    doc.setFillColor(240, 240, 240);
+    doc.rect(130, finalY - 8, 65, 12, 'F');
+    doc.setFont("helvetica", "bold");
+    doc.text("TOTAL AMOUNT:", 135, finalY);
+    doc.text(`${inv.totalBudget.toFixed(2)} AED`, 190, finalY, { align: "right" });
 
     // Footer
-    const finalY = doc.lastAutoTable.finalY + 20;
-    doc.setFontSize(10);
+    doc.setFontSize(8);
     doc.setTextColor(150);
-    doc.text("Thank you for choosing RIDENOVA CARLIFT.", 105, finalY, { align: "center" });
+    doc.text("Thank you for choosing Ridenova Carlift Services.", 105, 285, { align: "center" });
 
-    // Save
-    doc.save(`Ridenova_Invoice_${inv.id}.pdf`);
+    doc.save(`Ridenova_${type}_${inv.id}.pdf`);
+};
+window.copyInvoiceDetails = function(invoiceId) {
+            const inv = window.invoices.find(i => i.id === invoiceId);
+            if (!inv) return;
+        
+            // Formatting the text exactly as requested: "Key : Value" per row
+            const detailsText = `
+        RIDENOVA CARLIFT DETAILS
+        ------------------------
+        Invoice ID : ${inv.id}
+        Passenger Name : ${inv.passengerName}
+        Phone Number : ${inv.passengerPhone}
+        Gender : ${inv.passengerGender || 'N/A'}
+        Nationality : ${inv.passengerNationality || 'N/A'}
+        Agent : ${inv.passengerAgent || 'N/A'}
+        
+        RIDE DETAILS
+        Pickup Time : ${inv.pickupTime}
+        Dropoff Time : ${inv.dropoffTime}
+        Days per Week : ${inv.daysPerWeek}
+        Ride Way : ${inv.rideWay === 'one-way' ? 'One Way' : 'Two Way'}
+        Ride Type : ${inv.rideType}
+        Note : ${inv.note || 'None'}
+        
+        FINANCIALS
+        Total Budget : AED ${inv.totalBudget}
+        Daily Budget : AED ${inv.dailyBudget ? inv.dailyBudget.toFixed(2) : '0.00'}
+        
+        LOCATIONS
+        Pickup Link : ${inv.pickupLocation}
+        Dropoff Link : ${inv.dropoffLocation}
+        Route Link : ${inv.routeLink}
+            `.trim();
+        
+            // Copy to Clipboard
+            navigator.clipboard.writeText(detailsText).then(() => {
+                showNotification('Details copied to clipboard!', 'success');
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+                showNotification('Failed to copy details', 'error');
+            });
+};
+// Update the View function to link the new buttons
+const originalViewInvoiceDetails = window.viewInvoiceDetails;
+window.viewInvoiceDetails = function(invoiceId) {
+    originalViewInvoiceDetails(invoiceId); // Run the existing display logic
+    
+    // Re-attach the two specific download triggers
+    document.getElementById('download-passenger-pdf-btn').onclick = () => window.generatePDFInvoice(invoiceId, 'passenger');
+    document.getElementById('download-driver-pdf-btn').onclick = () => window.generatePDFInvoice(invoiceId, 'driver');
+    document.getElementById('copy-details-btn').onclick = () => window.copyInvoiceDetails(invoiceId);
 };
 // 3. Step 1: Open Modal to Select Profile
 function openSplitProfileSelector() {
@@ -5011,9 +5122,14 @@ function fixDropdownPositioning() {
 
         // Utility Functions
         function generateId(prefix) {
+            if (prefix === 'inv') {
+                const count = (window.invoices ? window.invoices.length : 0) + 1;
+                // Pad with zeros to maintain 4 digits
+                return "UAE-#" + count.toString().padStart(4, '0');
+            }
+            // Keep original logic for users/expenses
             return prefix + Date.now().toString(36) + Math.random().toString(36).substr(2);
         }
-
         function getCurrentDateTime() {
             const now = new Date();
             return {
@@ -5865,24 +5981,19 @@ function renderEmployeesTable() {
         const workingHours = calculateWorkingHours(user.id);
         const earnings = calculateEmployeeEarnings(user.id, 'total');
 
-        // --- NEW STATUS LOGIC START ---
-        // Get arrays safely (default to empty if they don't exist)
+        // Logic to check if user is Online
         const logins = user.loginTimes || [];
         const logouts = user.logoutTimes || [];
-
-        // Get the very last timestamp from each array
-        // If array is empty, use a very old date as fallback
         const lastLogin = logins.length > 0 ? logins[logins.length - 1] : "1970-01-01";
         const lastLogout = logouts.length > 0 ? logouts[logouts.length - 1] : "1970-01-01";
-
-        // Compare strings directly (ISO format allows this)
-        // If Last Login is later (greater) than Last Logout, user is Online.
         const isOnline = lastLogin > lastLogout;
-        // --- NEW STATUS LOGIC END ---
+
+        // Get the display name: Full Name if available, otherwise Username
+        const displayName = user.fullname || user.username;
 
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td>${user.id}</td>
+            <td>${displayName}</td> 
             <td>${user.username}</td>
             <td>${user.role.charAt(0).toUpperCase() + user.role.slice(1)}</td>
             <td>${workingHours.toFixed(1)} hours</td>
