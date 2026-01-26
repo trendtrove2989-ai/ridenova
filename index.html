@@ -1134,15 +1134,15 @@
 }
 
 .table-choice-options {
-    position: fixed;
+    position: fixed; /* Keeps it from getting cut off by the table */
     background: rgba(10, 12, 18, 0.98);
     border: 1px solid var(--accent);
     border-radius: 6px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.8);
     z-index: 10000;
     display: none;
-    max-height: 200px;
-    overflow-y: auto;
+    max-height: 250px; /* Limits height so it doesn't hit the bottom of the screen */
+    overflow-y: auto;  /* Makes the list of names scrollable */
     margin-top: 2px;
 }
 
@@ -1178,9 +1178,8 @@
 /* FIXED: Ensure table containers allow dropdown overflow */
 .table-container {
     overflow-x: auto;
-    overflow-y: visible; /* Add this */
-    margin: 20px 0;
-    position: relative; /* Add this */
+    overflow-y: visible !important; /* Allows dropdowns to be seen */
+    position: relative;
 }
 
 /* FIXED: Prevent table from clipping dropdowns */
@@ -1489,8 +1488,20 @@ th, td {
     </div>
 </div>
             <!-- Employees Section -->
-            
+          
 <div id="admin-employees" class="section">
+                <div class="filter-options" style="margin-bottom: 20px;">
+                    <label><strong>Filter by Role:</strong></label>
+                    <button class="bubbles btn-small nav-btn active" onclick="filterEmployeesByRole('all')">
+                        <span class="text">All Employees</span>
+                    </button>
+                    <button class="bubbles btn-small nav-btn" onclick="filterEmployeesByRole('passenger')">
+                        <span class="text">Passenger Side</span>
+                    </button>
+                    <button class="bubbles btn-small nav-btn" onclick="filterEmployeesByRole('driver')">
+                        <span class="text">Driver Side</span>
+                    </button>
+                </div>       
                 <h3>Employee Management</h3>
                 <div class="table-container">
                     <table id="employees-table">
@@ -2923,9 +2934,10 @@ th, td {
                 
                 <div class="invoice-section">
                     <h4>Ride Details</h4>
-                    <p><strong>Note:</strong> <span id="modal-note" style="color: var(--status-unassigned);"></span></p> <p><strong>Pickup Time:</strong> <span id="modal-pickup-time"></span></p>
+                    <p><strong>Pickup Time:</strong> <span id="modal-pickup-time"></span></p>
                     <p><strong>Dropoff Time:</strong> <span id="modal-dropoff-time"></span></p>
                     <p><strong>Days per Week:</strong> <span id="modal-days-week"></span></p>
+                    <p><strong>Total Monthly Days:</strong> <span id="modal-monthly-days"></span></p> 
                     <p><strong>Ride Way:</strong> <span id="modal-ride-way"></span></p>
                     <p><strong>Ride Type:</strong> <span id="modal-ride-type"></span></p>
                 </div>
@@ -2934,22 +2946,21 @@ th, td {
                     <h4>Financial Details</h4>
                     <p><strong>Total Budget:</strong> AED <span id="modal-total-budget"></span></p>
                     <p><strong>Service Charges:</strong> AED <span id="modal-service-charges"></span></p>
-                    <p><strong>Driver Charges:</strong> AED <span id="modal-driver-charges">0.00</span></p>
+                    <p><strong>Driver Charges:</strong> AED <span id="modal-driver-charges"></span></p>
                     <p><strong>Daily Budget:</strong> AED <span id="modal-daily-budget"></span></p>
                     <p><strong>Status:</strong> <span id="modal-status"></span></p>
+                </div>
+            
+                <div class="invoice-section" style="grid-column: span 1;">
+                    <h4>Detail Note</h4>
+                    <p id="modal-note-content" style="color: var(--accent); font-style: italic; white-space: pre-wrap;"></p>
                 </div>
                 
                 <div class="invoice-section">
                     <h4>Location Details</h4>
-                    <p><strong>Pickup Location:</strong> 
-                        <a href="#" id="modal-pickup-link" target="_blank" class="social-link maps btn-small">View on Map</a>
-                    </p>
-                    <p><strong>Dropoff Location:</strong> 
-                        <a href="#" id="modal-dropoff-link" target="_blank" class="social-link maps btn-small">View on Map</a>
-                    </p>
-                    <p><strong>Complete Route:</strong> 
-                        <a href="#" id="modal-route-link" target="_blank" class="social-link maps btn-small">View Route</a>
-                    </p>
+                    <p><strong>Pickup:</strong> <a href="#" id="modal-pickup-link" target="_blank" class="social-link maps btn-small">View Map</a></p>
+                    <p><strong>Dropoff:</strong> <a href="#" id="modal-dropoff-link" target="_blank" class="social-link maps btn-small">View Map</a></p>
+                    <p><strong>Route:</strong> <a href="#" id="modal-route-link" target="_blank" class="social-link maps btn-small">View Route</a></p>
                 </div>
             </div>
         </div>
@@ -3098,7 +3109,7 @@ th, td {
             emailjs.init(EMAILJS_CONFIG.PUBLIC_KEY);
             console.log('EmailJS initialized for RIDENOVA');
         })();
-        
+        let currentEmployeeRoleFilter = 'all'; // Add this at the top of your script with other global variables
         function sendSignupNotification(userData) {
             return new Promise((resolve, reject) => {
                 const templateParams = {
@@ -3214,19 +3225,15 @@ window.generatePDFInvoice = function(invoiceId, type = 'passenger') {
     const gold = [212, 175, 55]; 
     const black = [0, 0, 0];
 
-    // --- Header Banner (Full Width) ---
-    doc.setFillColor(10, 12, 16); // Dark background for banner
+    // --- Header Banner ---
+    doc.setFillColor(10, 12, 16);
     doc.rect(0, 0, 210, 45, 'F');
-    
-    // Company Name in Center of Banner
     doc.setFontSize(28);
     doc.setTextColor(212, 175, 55);
     doc.setFont("helvetica", "bold");
     doc.text("RIDENOVA CARLIFT", 105, 25, { align: "center" });
-    
     doc.setFontSize(10);
     doc.setTextColor(255, 255, 255);
-    doc.setFont("helvetica", "normal");
     doc.text("PREMIUM TRANSPORTATION SERVICES", 105, 35, { align: "center" });
 
     // --- Invoice Type Ribbon ---
@@ -3237,56 +3244,53 @@ window.generatePDFInvoice = function(invoiceId, type = 'passenger') {
     doc.text(`${type.toUpperCase()} INVOICE: ${inv.id}`, 105, 52, { align: "center" });
 
     let currentY = 70;
+    let finalGrandTotal = 0;
 
     if (type === 'passenger') {
-        // --- Passenger Layout (Full Details) ---
+        // Passenger Logic: Monthly Budget (1300) + Service Charges (260) = 1560
+        const baseTransport = parseFloat(inv.totalBudget) || 0;
+        const sCharges = parseFloat(inv.serviceCharges) || 0;
+        finalGrandTotal = baseTransport + sCharges;
+
         doc.setTextColor(0, 0, 0);
-        doc.setFontSize(12);
         doc.text("PASSENGER DETAILS", 15, currentY);
         doc.line(15, currentY + 2, 80, currentY + 2);
-        
         doc.setFontSize(10);
         currentY += 10;
         doc.text(`Name: ${inv.passengerName}`, 15, currentY);
-        doc.text(`Phone: ${inv.passengerPhone}`, 15, currentY + 6);
-        doc.text(`Nationality: ${inv.passengerNationality}`, 15, currentY + 12);
-        
-        // Right Side Details
         doc.text(`Date: ${inv.date}`, 140, currentY);
-        doc.text(`Agent: ${inv.passengerAgent}`, 140, currentY + 6);
 
-        // Table - No Quantity Column
         const tableRows = [
             ["Description", "Amount (AED)"],
-            ["Monthly Transportation Charges", `${(inv.transportAmount || 0).toFixed(2)} AED`],
-            ["Service & Management Charges", `${(inv.serviceCharges || 0).toFixed(2)} AED`]
+            ["Monthly Transportation Charges", `${baseTransport.toFixed(2)} AED`],
+            ["Service & Management Charges", `${sCharges.toFixed(2)} AED`]
         ];
 
         doc.autoTable({
-            startY: currentY + 25,
+            startY: currentY + 20,
             head: [tableRows[0]],
             body: tableRows.slice(1),
             theme: 'grid',
-            headStyles: { fillColor: gold, textColor: [0,0,0] },
-            styles: { fontSize: 10 },
-            columnStyles: { 1: { halign: 'right' } }
+            headStyles: { fillColor: gold, textColor: [0,0,0] }
         });
     } else {
-        // --- Driver Layout (Amounts Only) ---
+        // Driver Logic: Monthly Budget (1300) + Driver Charges (130) = 1430
+        const baseTransport = parseFloat(inv.totalBudget) || 0;
+        const dCharges = parseFloat(inv.driverCharges) || 0;
+        finalGrandTotal = baseTransport + dCharges;
+
         doc.setTextColor(0, 0, 0);
-        doc.setFontSize(12);
         doc.text("DRIVER PAYMENT SUMMARY", 15, currentY);
         doc.line(15, currentY + 2, 80, currentY + 2);
-
         doc.setFontSize(10);
         currentY += 10;
-        doc.text(`Invoice Ref: ${inv.id}`, 15, currentY);
-        doc.text(`Billing Date: ${inv.date}`, 15, currentY + 6);
+        doc.text(`Passenger: ${inv.passengerName}`, 15, currentY);
+        doc.text(`Billing Date: ${inv.date}`, 140, currentY);
 
         const tableRows = [
             ["Account Description", "Balance (AED)"],
-            ["Driver Contract Amount", `${(inv.transportAmount || 0).toFixed(2)} AED`],
-            ["Driver Side Service Surcharge", `${(inv.driverCharges || 0).toFixed(2)} AED`]
+            ["Driver Contract Amount", `${baseTransport.toFixed(2)} AED`],
+            ["Driver Side Service Surcharge", `${dCharges.toFixed(2)} AED`]
         ];
 
         doc.autoTable({
@@ -3294,24 +3298,19 @@ window.generatePDFInvoice = function(invoiceId, type = 'passenger') {
             head: [tableRows[0]],
             body: tableRows.slice(1),
             theme: 'striped',
-            headStyles: { fillColor: [40, 40, 40], textColor: [255,255,255] },
-            styles: { fontSize: 11 },
-            columnStyles: { 1: { halign: 'right' } }
+            headStyles: { fillColor: [40, 40, 40], textColor: [255,255,255] }
         });
     }
 
-    // --- Final Total ---
+    // --- Final Total (Corrected Summation) ---
     const finalY = doc.lastAutoTable.finalY + 15;
     doc.setFillColor(240, 240, 240);
     doc.rect(130, finalY - 8, 65, 12, 'F');
     doc.setFont("helvetica", "bold");
+    doc.setTextColor(0, 0, 0);
     doc.text("TOTAL AMOUNT:", 135, finalY);
-    doc.text(`${inv.totalBudget.toFixed(2)} AED`, 190, finalY, { align: "right" });
-
-    // Footer
-    doc.setFontSize(8);
-    doc.setTextColor(150);
-    doc.text("Thank you for choosing Ridenova Carlift Services.", 105, 285, { align: "center" });
+    // Display the sum of Budget + Charges
+    doc.text(`${finalGrandTotal.toFixed(2)} AED`, 190, finalY, { align: "right" });
 
     doc.save(`Ridenova_${type}_${inv.id}.pdf`);
 };
@@ -3359,9 +3358,51 @@ window.copyInvoiceDetails = function(invoiceId) {
 // Update the View function to link the new buttons
 const originalViewInvoiceDetails = window.viewInvoiceDetails;
 window.viewInvoiceDetails = function(invoiceId) {
-    originalViewInvoiceDetails(invoiceId); // Run the existing display logic
+    const invoice = window.invoices.find(inv => inv.id === invoiceId);
+    if (!invoice) {
+        showNotification('Invoice not found', 'error');
+        return;
+    }
+
+    // 1. Set Passenger Info
+    document.getElementById('invoice-modal-id').textContent = `Invoice #${invoice.id}`;
+    document.getElementById('modal-passenger-name').textContent = invoice.passengerName || 'N/A';
+    document.getElementById('modal-passenger-phone').textContent = invoice.passengerPhone || 'N/A';
+    document.getElementById('modal-passenger-gender').textContent = invoice.passengerGender || 'N/A';
+    document.getElementById('modal-passenger-nationality').textContent = invoice.passengerNationality || 'N/A';
+    document.getElementById('modal-passenger-agent').textContent = invoice.passengerAgent || 'N/A';
+
+    // 2. Set Ride Details & Calculate Days
+    document.getElementById('modal-pickup-time').textContent = invoice.pickupTime || 'N/A';
+    document.getElementById('modal-dropoff-time').textContent = invoice.dropoffTime || 'N/A';
     
-    // Re-attach the two specific download triggers
+    const daysPerWeek = parseInt(invoice.daysPerWeek) || 0;
+    document.getElementById('modal-days-week').textContent = daysPerWeek + " Days";
+    // Automatic Monthly Days calculation (Days per week * 4)
+    document.getElementById('modal-monthly-days').textContent = (daysPerWeek * 4) + " Days";
+    
+    document.getElementById('modal-ride-way').textContent = (invoice.rideWay === 'one-way' ? 'One Way' : 'Two Way');
+    document.getElementById('modal-ride-type').textContent = invoice.rideType ? invoice.rideType.toUpperCase() : 'N/A';
+
+    // 3. Set Note
+    document.getElementById('modal-note-content').textContent = invoice.note || 'No special notes provided.';
+
+    // 4. Set Financials
+    document.getElementById('modal-total-budget').textContent = (invoice.totalBudget || 0).toFixed(2);
+    document.getElementById('modal-service-charges').textContent = (invoice.serviceCharges || 0).toFixed(2);
+    document.getElementById('modal-driver-charges').textContent = (invoice.driverCharges || 0).toFixed(2);
+    document.getElementById('modal-daily-budget').textContent = (invoice.dailyBudget || 0).toFixed(2);
+    document.getElementById('modal-status').textContent = (invoice.status || 'unpaid').toUpperCase();
+
+    // 5. Set Links
+    document.getElementById('modal-pickup-link').href = invoice.pickupLocation || '#';
+    document.getElementById('modal-dropoff-link').href = invoice.dropoffLocation || '#';
+    document.getElementById('modal-route-link').href = invoice.routeLink || '#';
+
+    // Show Modal
+    document.getElementById('invoice-modal').style.display = 'block';
+
+    // Set Button Actions
     document.getElementById('download-passenger-pdf-btn').onclick = () => window.generatePDFInvoice(invoiceId, 'passenger');
     document.getElementById('download-driver-pdf-btn').onclick = () => window.generatePDFInvoice(invoiceId, 'driver');
     document.getElementById('copy-details-btn').onclick = () => window.copyInvoiceDetails(invoiceId);
@@ -4953,81 +4994,93 @@ choiceOptions.forEach(option => {
         // FIXED: Initialize admin table choice boxes with proper event handling
 // FIXED: Initialize admin table choice boxes with proper event handling
 function initializeAdminTableChoiceBoxes() {
-    // Handle table choice box clicks
+    // Handle all clicks on the document
     document.addEventListener('click', function(e) {
-        if (e.target.closest('.table-choice-box')) {
-            const choiceBox = e.target.closest('.table-choice-box');
-            const container = choiceBox.closest('.table-choice-container');
-            
-            // Close all other dropdowns
-            document.querySelectorAll('.table-choice-container').forEach(c => {
-                if (c !== container) {
-                    c.classList.remove('active');
-                }
-            });
-            
-            // Toggle current dropdown
-            container.classList.toggle('active');
-            
-            // Position dropdown properly
-            const options = container.querySelector('.table-choice-options');
-            if (options && container.classList.contains('active')) {
-                const rect = choiceBox.getBoundingClientRect();
-                options.style.left = rect.left + 'px';
-                options.style.top = (rect.bottom + 2) + 'px';
-                options.style.width = rect.width + 'px';
-            }
-            
-            e.stopPropagation();
-        }
+        const choiceBox = e.target.closest('.table-choice-box');
+        const isOption = e.target.closest('.table-choice-option');
         
-        // Handle table choice option clicks
-        if (e.target.closest('.table-choice-option')) {
-            const option = e.target.closest('.table-choice-option');
+        // 1. If clicking a Choice Box (The button)
+        if (choiceBox) {
+            const container = choiceBox.closest('.table-choice-container');
+            const options = container.querySelector('.table-choice-options');
+            const wasActive = container.classList.contains('active');
+
+            // Close ALL other open dropdowns first
+            document.querySelectorAll('.table-choice-container').forEach(c => {
+                c.classList.remove('active');
+                const opt = c.querySelector('.table-choice-options');
+                if (opt) opt.style.display = 'none';
+            });
+
+            // If it wasn't active before, open it now
+            if (!wasActive) {
+                container.classList.add('active');
+                options.style.display = 'block';
+                
+                // Position logic
+                const rect = choiceBox.getBoundingClientRect();
+                options.style.position = 'fixed';
+                options.style.left = rect.left + 'px';
+                options.style.width = rect.width + 'px';
+                
+                // Calculate height to see if we should flip it UP
+                const dropdownHeight = options.offsetHeight || 250;
+                if (rect.bottom + dropdownHeight > window.innerHeight) {
+                    options.style.top = (rect.top - dropdownHeight) + 'px';
+                } else {
+                    options.style.top = (rect.bottom + 2) + 'px';
+                }
+            } else {
+                // If it WAS active, we just closed it (the cleanup above did this)
+                container.classList.remove('active');
+                options.style.display = 'none';
+            }
+            e.stopPropagation();
+            return;
+        }
+
+        // 2. If clicking an Option (The name/choice)
+        if (isOption) {
+            const option = isOption;
             const container = option.closest('.table-choice-container');
             const choiceBox = container.querySelector('.table-choice-box');
+            const options = container.querySelector('.table-choice-options');
             const value = option.getAttribute('data-value');
             const text = option.textContent;
-            
-            // Update choice box text
+
             choiceBox.querySelector('span:first-child').textContent = text;
-            
-            // Add selected class for color fill
             choiceBox.classList.add('selected');
-            
-            // Close dropdown
+
+            // Close the menu
             container.classList.remove('active');
-            
-            // Call the appropriate function based on the container ID
+            options.style.display = 'none';
+
+            // Trigger the backend functions
             const containerId = container.id;
-            
             if (containerId.includes('driver-agent')) {
-                const profileId = containerId.replace('driver-agent-container-', '');
-                assignDriverAgent(profileId, value);
+                assignDriverAgent(containerId.replace('driver-agent-container-', ''), value);
             } else if (containerId.includes('pickup-status')) {
-                const profileId = containerId.replace('pickup-status-container-', '');
-                updatePickupStatus(profileId, value);
+                updatePickupStatus(containerId.replace('pickup-status-container-', ''), value);
             } else if (containerId.includes('payment-status')) {
-                const invoiceId = containerId.replace('payment-status-container-', '');
-                updatePaymentStatus(invoiceId, value);
+                updatePaymentStatus(containerId.replace('payment-status-container-', ''), value);
             } else if (containerId.includes('service-charges-status')) {
-                const invoiceId = containerId.replace('service-charges-status-container-', '');
-                updateServiceChargesStatus(invoiceId, value);
-            }
-            else if (containerId.includes('salary-status')) {
-                const employeeId = containerId.replace('salary-status-container-', '');
-                updateSalaryStatus(employeeId, value);
+                updateServiceChargesStatus(containerId.replace('service-charges-status-container-', ''), value);
+            } else if (containerId.includes('salary-status')) {
+                updateSalaryStatus(containerId.replace('salary-status-container-', ''), value);
+            } else if (containerId.includes('dashboard-driver')) {
+                 assignDriverAgent(containerId.replace('dashboard-driver-container-', ''), value);
             }
             
             e.stopPropagation();
+            return;
         }
-        
-        // Close dropdowns when clicking outside
-        if (!e.target.closest('.table-choice-container')) {
-            document.querySelectorAll('.table-choice-container').forEach(container => {
-                container.classList.remove('active');
-            });
-        }
+
+        // 3. If clicking anywhere else, close all dropdowns
+        document.querySelectorAll('.table-choice-container').forEach(container => {
+            container.classList.remove('active');
+            const opt = container.querySelector('.table-choice-options');
+            if (opt) opt.style.display = 'none';
+        });
     });
 }
 
@@ -5253,7 +5306,7 @@ function login() {
             showNotification(`Welcome back, ${user.username}!`, 'success');
             if (window.checkLoginNotifications) window.checkLoginNotifications();
         } else {
-            showNotification('please add the hosting domain and the firebase to start', 'error');
+            showNotification('please enter the valid user name or password', 'error');
         }
         
         document.getElementById('login-username').value = '';
@@ -5971,24 +6024,49 @@ function renderDriverDashboard() {
 }
 
         // Admin Dashboard Functions
+window.filterEmployeesByRole = function(role) {
+    currentEmployeeRoleFilter = role;
+    
+    // Update active button UI
+    const buttons = document.querySelectorAll('#admin-employees .nav-btn');
+    buttons.forEach(btn => {
+        if(btn.getAttribute('onclick').includes(`'${role}'`)) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    
+    renderEmployeesTable();
+};
+
 function renderEmployeesTable() {
     const tbody = document.querySelector('#employees-table tbody');
     if (!tbody) return;
     tbody.innerHTML = '';
 
-    // Filter employees (exclude admin)
-    window.users.filter(u => u.role !== 'admin').forEach(user => {
+    // Filter employees by Role
+    let filteredUsers = window.users.filter(u => u.role !== 'admin');
+
+    if (currentEmployeeRoleFilter !== 'all') {
+        filteredUsers = filteredUsers.filter(u => u.role === currentEmployeeRoleFilter);
+    }
+
+    if (filteredUsers.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px;">No employees found in this category.</td></tr>`;
+        return;
+    }
+
+    filteredUsers.forEach(user => {
         const workingHours = calculateWorkingHours(user.id);
         const earnings = calculateEmployeeEarnings(user.id, 'total');
 
-        // Logic to check if user is Online
         const logins = user.loginTimes || [];
         const logouts = user.logoutTimes || [];
         const lastLogin = logins.length > 0 ? logins[logins.length - 1] : "1970-01-01";
         const lastLogout = logouts.length > 0 ? logouts[logouts.length - 1] : "1970-01-01";
         const isOnline = lastLogin > lastLogout;
 
-        // Get the display name: Full Name if available, otherwise Username
         const displayName = user.fullname || user.username;
 
         const row = document.createElement('tr');
@@ -8338,42 +8416,49 @@ function unassignDriverFromProfile(profileId) {
                 showNotification('Invoice not found', 'error');
                 return;
             }
-
-            // Populate modal with invoice data
+        
+            // Header & Passenger Info
             document.getElementById('invoice-modal-id').textContent = `Invoice #${invoice.id}`;
             document.getElementById('modal-passenger-name').textContent = invoice.passengerName || 'N/A';
             document.getElementById('modal-passenger-phone').textContent = invoice.passengerPhone || 'N/A';
             document.getElementById('modal-passenger-gender').textContent = invoice.passengerGender || 'N/A';
             document.getElementById('modal-passenger-nationality').textContent = invoice.passengerNationality || 'N/A';
             document.getElementById('modal-passenger-agent').textContent = invoice.passengerAgent || 'N/A';
-            document.getElementById('modal-note').textContent = invoice.note || 'None'; // Populate the note
+        
+            // Ride Details (Updated with Monthly Days)
             document.getElementById('modal-pickup-time').textContent = invoice.pickupTime || 'N/A';
             document.getElementById('modal-dropoff-time').textContent = invoice.dropoffTime || 'N/A';
-            document.getElementById('modal-days-week').textContent = invoice.daysPerWeek || 'N/A';
+            document.getElementById('modal-days-week').textContent = `${invoice.daysPerWeek} Days`;
+            
+            // Logic: Calculate monthly days (Days per week * 4)
+            const monthlyDays = invoice.monthlyDays || (parseInt(invoice.daysPerWeek) * 4);
+            document.getElementById('modal-monthly-days').textContent = `${monthlyDays} Days`;
+            
             document.getElementById('modal-ride-way').textContent = invoice.rideWay === 'one-way' ? 'One Way' : 'Two Way';
             document.getElementById('modal-ride-type').textContent = invoice.rideType ? invoice.rideType.charAt(0).toUpperCase() + invoice.rideType.slice(1) : 'N/A';
-            document.getElementById('modal-total-budget').textContent = (invoice.totalBudget || invoice.amount || 0).toFixed(2);
+            
+            // Populate Note
+            document.getElementById('modal-note').textContent = invoice.note || 'No specific notes provided.';
+        
+            // Financials
+            document.getElementById('modal-total-budget').textContent = (invoice.totalBudget || 0).toFixed(2);
             document.getElementById('modal-service-charges').textContent = (invoice.serviceCharges || 0).toFixed(2);
             document.getElementById('modal-driver-charges').textContent = (invoice.driverCharges || 0).toFixed(2);
             document.getElementById('modal-daily-budget').textContent = (invoice.dailyBudget || 0).toFixed(2);
             document.getElementById('modal-status').textContent = invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1);
             
-            // Set location links
-            const pickupLink = document.getElementById('modal-pickup-link');
-            const dropoffLink = document.getElementById('modal-dropoff-link');
-            const routeLink = document.getElementById('modal-route-link');
-            
-            pickupLink.href = invoice.pickupLocation || '#';
-            dropoffLink.href = invoice.dropoffLocation || '#';
-            routeLink.href = invoice.routeLink || '#';
-
+            // Map Links
+            document.getElementById('modal-pickup-link').href = invoice.pickupLocation || '#';
+            document.getElementById('modal-dropoff-link').href = invoice.dropoffLocation || '#';
+            document.getElementById('modal-route-link').href = invoice.routeLink || '#';
+        
             // Show modal
             document.getElementById('invoice-modal').style.display = 'block';
-            // Add this inside viewInvoiceDetails(invoiceId)
-            const downloadBtn = document.getElementById('download-pdf-btn');
-            if(downloadBtn) {
-                downloadBtn.onclick = () => window.generatePDFInvoice(invoiceId);
-            }            
+        
+            // Re-attach download triggers
+            document.getElementById('download-passenger-pdf-btn').onclick = () => window.generatePDFInvoice(invoiceId, 'passenger');
+            document.getElementById('download-driver-pdf-btn').onclick = () => window.generatePDFInvoice(invoiceId, 'driver');
+            document.getElementById('copy-details-btn').onclick = () => window.copyInvoiceDetails(invoiceId);
         }
 
         function closeInvoiceModal() {
