@@ -3379,7 +3379,7 @@ window.viewInvoiceDetails = function(invoiceId) {
     const daysPerWeek = parseInt(invoice.daysPerWeek) || 0;
     document.getElementById('modal-days-week').textContent = daysPerWeek + " Days";
     // Automatic Monthly Days calculation (Days per week * 4)
-    document.getElementById('modal-monthly-days').textContent = (daysPerWeek * 4) + " Days";
+    document.getElementById('modal-monthly-days').textContent = (daysPerWeek * 4) + " Days"+2;
     
     document.getElementById('modal-ride-way').textContent = (invoice.rideWay === 'one-way' ? 'One Way' : 'Two Way');
     document.getElementById('modal-ride-type').textContent = invoice.rideType ? invoice.rideType.toUpperCase() : 'N/A';
