@@ -2615,7 +2615,7 @@ th, td {
         <button class="nav-btn active" onclick="showDriverSection('home')">Home</button>
         <button class="nav-btn" onclick="showDriverSection('dashboard')">Dashboard</button>
         <button class="nav-btn" onclick="showDriverSection('monthly-gross')">Monthly Gross</button>
-        <button class="nav-btn" onclick="showDriverSection('targets')">My Targets</button> <button class="nav-btn" onclick="showDriverSection('invoices')">Assigned profiles</button>
+        <button class="nav-btn" onclick="showDriverSection('targets')">My Targets</button> 
         <button class="nav-btn" onclick="showDriverSection('invoices')">Assigned profiles</button>
         <button class="nav-btn" onclick="showDriverSection('drivers')">Drivers Details</button>
         <button class="nav-btn" onclick="showDriverSection('earnings')">Earnings</button>
@@ -3325,9 +3325,7 @@ window.copyInvoiceDetails = function(invoiceId) {
         Invoice ID : ${inv.id}
         Passenger Name : ${inv.passengerName}
         Phone Number : ${inv.passengerPhone}
-        Gender : ${inv.passengerGender || 'N/A'}
-        Nationality : ${inv.passengerNationality || 'N/A'}
-        Agent : ${inv.passengerAgent || 'N/A'}
+
         
         RIDE DETAILS
         Pickup Time : ${inv.pickupTime}
@@ -3345,6 +3343,10 @@ window.copyInvoiceDetails = function(invoiceId) {
         Pickup Link : ${inv.pickupLocation}
         Dropoff Link : ${inv.dropoffLocation}
         Route Link : ${inv.routeLink}
+
+        Gender : ${inv.passengerGender || 'N/A'}
+        Nationality : ${inv.passengerNationality || 'N/A'}
+        Agent : ${inv.passengerAgent || 'N/A'}
             `.trim();
         
             // Copy to Clipboard
@@ -4667,30 +4669,7 @@ function renderAdminDashboardSection() {
     // Just replace 'invoices' with 'filteredProfiles' in the forEach loop
 }
 
-function renderAdminProfilesTable() {
-    const tbody = document.querySelector('#admin-profiles-table tbody');
-    tbody.innerHTML = '';
-    
-    // Filter by month
-    const pendingProfiles = invoices.filter(inv => 
-        (inv.pickupStatus === 'no status yet' || !inv.pickupStatus)
-    );
-    const filteredProfiles = filterByMonth(pendingProfiles, currentProfilesMonth);
-    
-    if (filteredProfiles.length === 0) {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td colspan="6" style="text-align: center; padding: 20px;">
-                No pending passenger profiles found for selected month
-            </td>
-        `;
-        tbody.appendChild(row);
-        return;
-    }
-    
-    // Initialize admin table choice boxes after rendering
-    initializeAdminTableChoiceBoxes();
-}
+
 
 function renderAdminInvoicesTable() {
     const tbody = document.querySelector('#admin-invoices-table tbody');
@@ -4999,13 +4978,13 @@ function initializeAdminTableChoiceBoxes() {
         const choiceBox = e.target.closest('.table-choice-box');
         const isOption = e.target.closest('.table-choice-option');
         
-        // 1. If clicking a Choice Box (The button)
+        // 1. If clicking a Choice Box (The button/dropdown itself)
         if (choiceBox) {
             const container = choiceBox.closest('.table-choice-container');
             const options = container.querySelector('.table-choice-options');
             const wasActive = container.classList.contains('active');
 
-            // Close ALL other open dropdowns first
+            // Close ALL other open dropdowns first to prevent overlap
             document.querySelectorAll('.table-choice-container').forEach(c => {
                 c.classList.remove('active');
                 const opt = c.querySelector('.table-choice-options');
@@ -5017,13 +4996,13 @@ function initializeAdminTableChoiceBoxes() {
                 container.classList.add('active');
                 options.style.display = 'block';
                 
-                // Position logic
+                // Positioning logic to prevent clipping
                 const rect = choiceBox.getBoundingClientRect();
                 options.style.position = 'fixed';
                 options.style.left = rect.left + 'px';
                 options.style.width = rect.width + 'px';
                 
-                // Calculate height to see if we should flip it UP
+                // Flip dropdown UP if there is no space at the bottom
                 const dropdownHeight = options.offsetHeight || 250;
                 if (rect.bottom + dropdownHeight > window.innerHeight) {
                     options.style.top = (rect.top - dropdownHeight) + 'px';
@@ -5031,7 +5010,6 @@ function initializeAdminTableChoiceBoxes() {
                     options.style.top = (rect.bottom + 2) + 'px';
                 }
             } else {
-                // If it WAS active, we just closed it (the cleanup above did this)
                 container.classList.remove('active');
                 options.style.display = 'none';
             }
@@ -5039,7 +5017,7 @@ function initializeAdminTableChoiceBoxes() {
             return;
         }
 
-        // 2. If clicking an Option (The name/choice)
+        // 2. If clicking an Option (The actual status choice like "Booked")
         if (isOption) {
             const option = isOption;
             const container = option.closest('.table-choice-container');
@@ -5048,6 +5026,7 @@ function initializeAdminTableChoiceBoxes() {
             const value = option.getAttribute('data-value');
             const text = option.textContent;
 
+            // Visual update
             choiceBox.querySelector('span:first-child').textContent = text;
             choiceBox.classList.add('selected');
 
@@ -5055,19 +5034,36 @@ function initializeAdminTableChoiceBoxes() {
             container.classList.remove('active');
             options.style.display = 'none';
 
-            // Trigger the backend functions
+            // TRIGGER DATABASE UPDATES BASED ON CONTAINER ID
             const containerId = container.id;
+
+            // --- CASE: Driver Agent Assignment (Admin) ---
             if (containerId.includes('driver-agent')) {
                 assignDriverAgent(containerId.replace('driver-agent-container-', ''), value);
-            } else if (containerId.includes('pickup-status')) {
+            } 
+            // --- CASE: Pickup Status (Admin Passenger Profile Section) ---
+            else if (containerId.includes('pickup-status') && !containerId.includes('driver-pickup')) {
                 updatePickupStatus(containerId.replace('pickup-status-container-', ''), value);
-            } else if (containerId.includes('payment-status')) {
+            } 
+            // --- CASE: NEW - Driver's Own Dashboard Pickup Status ---
+            else if (containerId.includes('driver-pickup-status')) {
+                const invoiceId = containerId.replace('driver-pickup-status-container-', '');
+                updatePickupStatus(invoiceId, value); 
+            }
+            // --- CASE: Payment Status (Admin Invoice Section) ---
+            else if (containerId.includes('payment-status')) {
                 updatePaymentStatus(containerId.replace('payment-status-container-', ''), value);
-            } else if (containerId.includes('service-charges-status')) {
+            } 
+            // --- CASE: Service Charges Payment ---
+            else if (containerId.includes('service-charges-status')) {
                 updateServiceChargesStatus(containerId.replace('service-charges-status-container-', ''), value);
-            } else if (containerId.includes('salary-status')) {
+            } 
+            // --- CASE: Employee Salary Status ---
+            else if (containerId.includes('salary-status')) {
                 updateSalaryStatus(containerId.replace('salary-status-container-', ''), value);
-            } else if (containerId.includes('dashboard-driver')) {
+            } 
+            // --- CASE: Dashboard Driver Assignment ---
+            else if (containerId.includes('dashboard-driver')) {
                  assignDriverAgent(containerId.replace('dashboard-driver-container-', ''), value);
             }
             
@@ -5201,18 +5197,22 @@ function fixDropdownPositioning() {
                 notification.classList.remove('show');
             }, 3000);
         }
- function getPickupStatusClass(status) {
+        function getPickupStatusClass(status) {
             switch(status) {
-                case 'pickup confirmed': return 'status-paid';
-                case 'canceled': return 'status-unpaid';
-                default: return 'status-unassigned';
+                case 'pickup confirmed': return 'status-paid'; // Green
+                case 'canceled': return 'status-unpaid';      // Red
+                case 'booked': return 'status-unassigned';    // Yellow
+                case 'no status yet': return 'status-default'; // Grey
+                default: return 'status-unassigned';           // Default Yellow
             }
         }
 
         function getPickupStatusText(status) {
             switch(status) {
-                case 'pickup confirmed': return 'Confirmed';
+                case 'booked': return 'Booked';
+                case 'pickup confirmed': return 'Pickup Confirmed';
                 case 'canceled': return 'Canceled';
+                case 'no status yet': return 'Not Yet';
                 default: return 'Pending';
             }
         }
@@ -5246,13 +5246,7 @@ function login() {
     showLoader();
     
     setTimeout(() => {
-        // Maintenance check (12AM - 1AM)
-        const now = new Date();
-        if (now.getHours() === 0) { 
-            showNotification('System is under maintenance. Login allowed after 1:00 AM.', 'error');
-            hideLoader();
-            return;
-        }
+
 
         const username = document.getElementById('login-username').value.trim();
         const password = document.getElementById('login-password').value.trim();
@@ -6157,10 +6151,11 @@ driverAssignment = `
 }
 function renderAdminProfilesTable() {
     const tbody = document.querySelector('#admin-profiles-table tbody');
+    if (!tbody) return;
     tbody.innerHTML = '';
     
     // Filter profiles that are not yet confirmed or canceled
-    const pendingProfiles = invoices.filter(inv => inv.pickupStatus === 'no status yet' || !inv.pickupStatus);
+    const pendingProfiles = invoices.filter(inv => inv.pickupStatus === 'no status yet' || inv.pickupStatus === 'booked' || !inv.pickupStatus);
     
     if (pendingProfiles.length === 0) {
         const row = document.createElement('tr');
@@ -6173,22 +6168,17 @@ function renderAdminProfilesTable() {
         return;
     }
     
-    // Sort by date (newest first)
     const sortedProfiles = sortInvoicesByDate(pendingProfiles);
-    
-    // Get all available drivers
     const availableDrivers = users.filter(user => user.role === 'driver');
     
     sortedProfiles.forEach(profile => {
-        // Initialize pickupStatus if not exists
         if (!profile.pickupStatus) {
             profile.pickupStatus = 'no status yet';
         }
         
         // Determine display text for pickup status
-        let pickupStatusText = 'Not Yet';
-        if (profile.pickupStatus === 'pickup confirmed') pickupStatusText = 'Pickup Confirmed';
-        else if (profile.pickupStatus === 'canceled') pickupStatusText = 'Canceled';
+        let pickupStatusText = getPickupStatusText(profile.pickupStatus);
+        let statusClass = getPickupStatusClass(profile.pickupStatus);
         
         const row = document.createElement('tr');
         row.innerHTML = `
@@ -6210,12 +6200,13 @@ function renderAdminProfilesTable() {
             </td>
             <td>
                 <div class="table-choice-container" id="pickup-status-container-${profile.id}">
-                    <div class="table-choice-box ${profile.pickupStatus !== 'no status yet' ? 'selected' : ''}" id="pickup-status-choice-${profile.id}">
+                    <div class="table-choice-box ${profile.pickupStatus !== 'no status yet' ? 'selected' : ''} ${statusClass}" id="pickup-status-choice-${profile.id}">
                         <span>${pickupStatusText}</span>
                         <span>▼</span>
                     </div>
                     <div class="table-choice-options">
                         <div class="table-choice-option" data-value="no status yet">Not Yet</div>
+                        <div class="table-choice-option" data-value="booked">Booked</div>
                         <div class="table-choice-option" data-value="pickup confirmed">Pickup Confirmed</div>
                         <div class="table-choice-option" data-value="canceled">Canceled</div>
                     </div>
@@ -6230,7 +6221,6 @@ function renderAdminProfilesTable() {
         tbody.appendChild(row);
     });
     
-    // Initialize admin table choice boxes after rendering
     initializeAdminTableChoiceBoxes();
 }
 function renderAdminCancelledTable() {
@@ -6295,9 +6285,12 @@ function assignDriverAgent(profileId, driverId) {
     }
 }
 
-function updatePickupStatus(profileId, newStatus) {
+async function updatePickupStatus(profileId, newStatus) {
     const profile = invoices.find(inv => inv.id === profileId);
     if (!profile) return;
+
+    // We don't send notifications for "no status yet" (Not Yet)
+    const shouldNotify = newStatus !== 'no status yet';
 
     let updates = { pickupStatus: newStatus };
     
@@ -6312,8 +6305,27 @@ function updatePickupStatus(profileId, newStatus) {
 
     // SAVE TO DATABASE
     if (window.updateDoc && window.db) {
-        window.updateDoc(window.doc(window.db, "invoices", profileId), updates);
-        showNotification(`Status updated to ${newStatus}`, 'success');
+        try {
+            await window.updateDoc(window.doc(window.db, "invoices", profileId), updates);
+            showNotification(`Status updated to ${newStatus}`, 'success');
+
+            // --- NEW NOTIFICATION LOGIC ---
+            if (shouldNotify && profile.passengerId) {
+                const statusText = newStatus.toUpperCase();
+                const message = `Your profile with passenger name "${profile.passengerName}" has been ${statusText}`;
+                
+                // Send notification to the creator (passenger side employee)
+                window.sendSystemNotification(profile.passengerId, message);
+                
+                // Also notify the split agent if the profile is shared
+                if (profile.isSplit && profile.splitWithId) {
+                    window.sendSystemNotification(profile.splitWithId, message);
+                }
+            }
+        } catch (error) {
+            console.error("Error updating status:", error);
+            showNotification('Failed to update status', 'error');
+        }
     }
 }
 
@@ -7305,44 +7317,47 @@ function updateDriverStats() {
     document.getElementById('driver-completed-count').textContent = completedJobs.length;
 }
 
-    function renderDriverInvoicesTable() {
+function renderDriverInvoicesTable() {
     const tbody = document.querySelector('#driver-invoices-table tbody');
+    if (!tbody) return;
     tbody.innerHTML = '';
     
     const assignedInvoices = invoices.filter(inv => inv.driverId === currentUser.id);
-    
-    // Filter invoices based on current filter
     let filteredInvoices = assignedInvoices;
     
     switch(currentDriverFilter) {
-        case 'unpaid':
-            filteredInvoices = assignedInvoices.filter(inv => inv.status === 'unpaid');
-            break;
-        case 'paid':
-            filteredInvoices = assignedInvoices.filter(inv => inv.status === 'paid');
-            break;
-        case 'all':
-        default:
-            filteredInvoices = assignedInvoices;
+        case 'unpaid': filteredInvoices = assignedInvoices.filter(inv => inv.paymentStatus === 'unpaid'); break;
+        case 'paid': filteredInvoices = assignedInvoices.filter(inv => inv.paymentStatus === 'paid'); break;
+        default: filteredInvoices = assignedInvoices;
     }
     
-    // Sort by date (newest first)
     filteredInvoices = sortInvoicesByDate(filteredInvoices);
     
     filteredInvoices.forEach(invoice => {
-        // Use the correct amount and description
-        const amount = invoice.transportAmount || invoice.amount;
-        const description = invoice.passengerName ? 
-            `${invoice.passengerName} - ${invoice.rideType} ${invoice.rideWay}` : 
-            invoice.description;
-        
+        const amount = invoice.transportAmount || invoice.totalBudget;
+        const pickupStatusText = getPickupStatusText(invoice.pickupStatus || 'no status yet');
+        const statusClass = getPickupStatusClass(invoice.pickupStatus || 'no status yet');
+
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${invoice.id}</td>
             <td>${invoice.passengerName || 'N/A'}</td>
             <td>AED ${amount.toFixed(2)}</td>
-            <td>${description}</td>
-            <td><span class="status-${invoice.status}">${invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}</span></td>
+            <td>${invoice.pickupTime} - ${invoice.rideType}</td>
+            <td>
+                <div class="table-choice-container" id="driver-pickup-status-container-${invoice.id}">
+                    <div class="table-choice-box selected ${statusClass}" id="driver-pickup-status-choice-${invoice.id}">
+                        <span>${pickupStatusText}</span>
+                        <span>▼</span>
+                    </div>
+                    <div class="table-choice-options">
+                        <div class="table-choice-option" data-value="no status yet">Not Yet</div>
+                        <div class="table-choice-option" data-value="booked">Booked</div>
+                        <div class="table-choice-option" data-value="pickup confirmed">Pickup Confirmed</div>
+                        <div class="table-choice-option" data-value="canceled">Canceled</div>
+                    </div>
+                </div>
+            </td>
             <td>
                 <button class="bubbles btn-small" onclick="viewInvoiceDetails('${invoice.id}')">
                     <span class="text">View Details</span>
@@ -7351,6 +7366,9 @@ function updateDriverStats() {
         `;
         tbody.appendChild(row);
     });
+    
+    // Re-initialize dropdown listeners for the new elements
+    initializeAdminTableChoiceBoxes();
 }
 function renderDriverEarnings() {
     const today = new Date().toISOString().split('T')[0];
@@ -8543,15 +8561,7 @@ function unassignDriverFromProfile(profileId) {
                     signUp();
                 }
             });
-// Auto-logout at 12:00 AM check (runs every minute)
-            setInterval(() => {
-                const now = new Date();
-                // Check if time is 00:00 (Midnight) and someone is logged in
-                if (now.getHours() === 0 && now.getMinutes() === 0 && currentUser) {
-                    showNotification('System Auto-Logout: End of Day', 'info');
-                    logout();
-                }
-            }, 60000);
+
 
             initializeMonthFilters();
         }
