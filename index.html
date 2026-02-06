@@ -6289,12 +6289,12 @@ async function updatePickupStatus(profileId, newStatus) {
     const profile = invoices.find(inv => inv.id === profileId);
     if (!profile) return;
 
-    // We don't send notifications for "no status yet" (Not Yet)
-    const shouldNotify = newStatus !== 'no status yet';
+    // FIX: Check if the status is actually different to avoid duplicate triggers
+    if (profile.pickupStatus === newStatus) return;
 
+    const shouldNotify = newStatus !== 'no status yet';
     let updates = { pickupStatus: newStatus };
     
-    // Auto-update other fields based on status logic
     if (newStatus === 'canceled') {
         updates.cancelledDate = getCurrentDateTime().date;
         updates.paymentStatus = 'cancelled';
@@ -6303,28 +6303,27 @@ async function updatePickupStatus(profileId, newStatus) {
         updates.paymentStatus = 'unpaid';
     }
 
-    // SAVE TO DATABASE
     if (window.updateDoc && window.db) {
         try {
             await window.updateDoc(window.doc(window.db, "invoices", profileId), updates);
             showNotification(`Status updated to ${newStatus}`, 'success');
 
-            // --- NEW NOTIFICATION LOGIC ---
+            // --- NOTIFICATION LOGIC ---
             if (shouldNotify && profile.passengerId) {
                 const statusText = newStatus.toUpperCase();
-                const message = `Your profile with passenger name "${profile.passengerName}" has been ${statusText}`;
+                const message = `Your profile "${profile.passengerName}" (${profile.id}) status changed to: ${statusText}`;
                 
-                // Send notification to the creator (passenger side employee)
-                window.sendSystemNotification(profile.passengerId, message);
+                // Only send if the user isn't the one who made the change (Admin vs Employee)
+                if (currentUser.id !== profile.passengerId) {
+                    await window.sendSystemNotification(profile.passengerId, message);
+                }
                 
-                // Also notify the split agent if the profile is shared
-                if (profile.isSplit && profile.splitWithId) {
-                    window.sendSystemNotification(profile.splitWithId, message);
+                if (profile.isSplit && profile.splitWithId && currentUser.id !== profile.splitWithId) {
+                    await window.sendSystemNotification(profile.splitWithId, message);
                 }
             }
         } catch (error) {
             console.error("Error updating status:", error);
-            showNotification('Failed to update status', 'error');
         }
     }
 }
@@ -8606,17 +8605,31 @@ window.checkLoginNotifications = function() {
     const listContainer = document.getElementById('center-notification-list');
     listContainer.innerHTML = '';
 
-    currentUser.systemNotifications.forEach(note => {
-        const div = document.createElement('div');
-        div.className = 'notification-item';
-        div.innerHTML = `
-            <div style="font-size: 0.8em; color: var(--text-secondary); margin-bottom: 5px;">${note.date} at ${note.time}</div>
-            <div>${note.message}</div>
-        `;
-        listContainer.appendChild(div);
+    // FIX: Use a Set to track unique messages and prevent showing duplicates
+    const uniqueMessages = new Set();
+    
+    // Sort notifications to show newest first
+    const sortedNotes = [...currentUser.systemNotifications].reverse();
+
+    sortedNotes.forEach(note => {
+        // Create a unique key for the message content
+        if (!uniqueMessages.has(note.message)) {
+            uniqueMessages.add(note.message);
+            
+            const div = document.createElement('div');
+            div.className = 'notification-item';
+            div.innerHTML = `
+                <div style="font-size: 0.8em; color: var(--text-secondary); margin-bottom: 5px;">${note.date} at ${note.time}</div>
+                <div>${note.message}</div>
+            `;
+            listContainer.appendChild(div);
+        }
     });
 
-    document.getElementById('center-notification-modal').style.display = 'block';
+    // Only show the modal if there are unique messages to show
+    if (uniqueMessages.size > 0) {
+        document.getElementById('center-notification-modal').style.display = 'block';
+    }
 };
 
 // --- 3. Function to Dismiss (Clear from DB) ---
